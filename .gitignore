@@ -12,3 +12,9 @@
 
 # Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
+
+# Ignore a users config file, they should create one from the template file
+config.yaml
+
+# Ignore VIM temp files
+.*.swp
