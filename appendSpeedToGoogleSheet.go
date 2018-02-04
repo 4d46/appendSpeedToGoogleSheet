@@ -24,6 +24,7 @@ func main() {
         ctx := context.Background()
 
         type T struct {
+		Name string
                 Credentials string
                 Spreadsheetid string
         }
@@ -121,6 +122,7 @@ func main() {
 		pingTime,
 		downRate,
 		upRate,
+		t.Name,
 	}
 	vr.Values = append(vr.Values, myval)
 
