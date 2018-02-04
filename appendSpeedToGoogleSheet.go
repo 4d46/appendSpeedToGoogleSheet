@@ -6,9 +6,12 @@ import (
 	"io/ioutil"
 	"log"
 	"time"
-	"math/rand"
+	//"math/rand"
 	"os/user"
+	"os/exec"
 	"path/filepath"
+	"bufio"
+	"strings"
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
@@ -31,22 +34,10 @@ func main() {
         if err != nil {
                 log.Fatalf("Unable to read config.yaml file: %v", err)
         }
-	//s := string(configdata)
-	//fmt.Printf(s)
         err = yaml.Unmarshal(configdata, &t)
         if err != nil {
                 log.Fatalf("error: %v", err)
         }
-
-	//reader := bufio.NewReader(os.Stdin)
-	//text, _ := reader.ReadString('\n')
-	//fmt.Println(text)
-	//text, _ = reader.ReadString('\n')
-	//fmt.Println(text)
-	//text, _ = reader.ReadString('\n')
-	//fmt.Println(text)
-	//text, _ = reader.ReadString('\n')
-	//fmt.Println(text)
 
 	homePath, err := expandHome(t.Credentials)
 	absPath, err := filepath.Abs(homePath)
@@ -63,6 +54,41 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
+
+	// Run speed test
+	cmd := exec.Command("bash", "-c", "speedtest --simple")
+	stderrOut, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Fatalf("Error running speed test: %v", err)
+	}
+	//fmt.Printf("%s\n", stderrOut)
+
+	var pingTime string
+	var downRate string
+	var upRate string
+
+	scanner := bufio.NewScanner(strings.NewReader(string(stderrOut)))
+	for scanner.Scan() {
+		tokens := strings.Fields(scanner.Text())
+		switch tokens[0] {
+		case "Ping:":
+			pingTime = tokens[1]
+		case "Download:":
+			downRate = tokens[1]
+		case "Upload:":
+			upRate = tokens[1]
+		}
+		//fmt.Println(scanner.Text())
+	}
+
+	if len(pingTime) == 0 || len(downRate) == 0 || len(upRate) == 0 {
+		log.Fatalf("Invalid details returned:\n %s", stderrOut)
+	}
+
+//Ping: 19.608 ms
+//Download: 58.15 Mbit/s
+//Upload: 17.69 Mbit/s
+
 	client := config.Client(oauth2.NoContext)
 
 	srv, err := sheets.New(client)
@@ -87,13 +113,14 @@ func main() {
 	// How the input data should be inserted.
 	insertDataOption := "OVERWRITE"
 
-	r := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
+	//r := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
 
 	var vr sheets.ValueRange
 	myval := []interface{}{
 		time.Now().UTC().Format(time.RFC3339),
-		r.Float32(),
-		r.Float32(),
+		pingTime,
+		downRate,
+		upRate,
 	}
 	vr.Values = append(vr.Values, myval)
 
